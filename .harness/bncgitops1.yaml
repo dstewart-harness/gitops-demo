@@ -1,0 +1,60 @@
+pipeline:
+  name: bnc-gitops1
+  identifier: bncgitops1
+  projectIdentifier: DavidStewart
+  orgIdentifier: SE_Sandbox
+  tags: {}
+  stages:
+    - stage:
+        name: DeployGitOps
+        identifier: DeployGitOps
+        description: ""
+        type: Deployment
+        spec:
+          deploymentType: Kubernetes
+          gitOpsEnabled: true
+          execution:
+            steps:
+              - step:
+                  type: CreatePR
+                  name: Create PR
+                  identifier: createPR
+                  timeout: 10m
+                  spec:
+                    overrideConfig: false
+                    shell: Bash
+              - step:
+                  type: HarnessApproval
+                  name: Harness Approval
+                  identifier: Harness_Approval
+                  spec:
+                    approvalMessage: Please review the following information and approve the pipeline progression
+                    includePipelineExecutionHistory: true
+                    approvers:
+                      userGroups:
+                        - account._account_all_users
+                      minimumCount: 1
+                      disallowPipelineExecutor: false
+                    approverInputs: []
+                  timeout: 1d
+              - step:
+                  type: MergePR
+                  name: Merge PR
+                  identifier: mergePR
+                  spec:
+                    deleteSourceBranch: false
+                  timeout: 10m
+            rollbackSteps: []
+          service:
+            serviceRef: guestbook
+          environment:
+            environmentRef: DstewartMacK8
+            deployToAll: <+input>
+            gitOpsClusters: <+input>
+        tags: {}
+        failureStrategies:
+          - onFailure:
+              errors:
+                - AllErrors
+              action:
+                type: StageRollback
